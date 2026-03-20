@@ -1,0 +1,10 @@
+fastapi
+python-dotenv
+python-jose[cryptography]# Para lidar com os tokens do Auth0
+python-multipart
+pydantic-settings  
+uvicorn
+pytesseract
+pillow
+spacy
+requests
