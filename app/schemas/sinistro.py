@@ -1,5 +1,6 @@
 # app/schemas/sinistro.py
 from pydantic import BaseModel
+from typing import List, Optional # <-- Importe List e Optional
 
 class SinistroRequest(BaseModel):
     cliente_id: int
@@ -10,3 +11,4 @@ class SinistroResponse(BaseModel):
     sinistro_id: int
     status: str
     detalhes: str
+    raciocinio: Optional[List[str]] = None 

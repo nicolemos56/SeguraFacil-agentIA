@@ -9,3 +9,4 @@ pillow
 spacy
 requests
 streamlit
+python-dateutil
