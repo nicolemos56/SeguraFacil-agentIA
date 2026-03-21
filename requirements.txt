@@ -1,9 +1,7 @@
 fastapi
-python-dotenv
-python-jose[cryptography]# Para lidar com os tokens do Auth0
-python-multipart
-pydantic-settings  
 uvicorn
+python-jose[cryptography]
+python-dotenv
 pytesseract
 pillow
 spacy
