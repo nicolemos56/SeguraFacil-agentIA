@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI, Depends
 from app.auth.utils import verify_token
 from app.schemas.sinistro import SinistroRequest, SinistroResponse

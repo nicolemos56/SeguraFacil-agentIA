@@ -1,5 +1,3 @@
-# app/services/agente_ia.py
-
 import os
 import pytesseract
 from PIL import Image
@@ -12,7 +10,8 @@ from dateutil.parser import parse as parse_date
 from app.core.config import settings
 from app.schemas.sinistro import SinistroRequest, SinistroResponse
 
-# --- CONFIGURAÇÕES INICIAIS A NÍVEL DE MÓDULO ---
+
+
 if os.name == 'nt':
     pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_CMD
 
@@ -24,14 +23,16 @@ except OSError:
     nlp = spacy.load("pt_core_news_sm")
     print("Download do modelo concluído.")
 
-# --- LÓGICA PRINCIPAL DO AGENTE DE IA ---
+
+
 
 def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
     print(f" Agente Analista a iniciar para cliente ID: {sinistro.cliente_id}...")
     raciocinio = []
 
     try:
-        # --- Passo 1: Obter Documento ---
+       
+        
         raciocinio.append("Passo 1: A obter e validar o documento.")
         if sinistro.documento_url.startswith('http'):
             response = requests.get(sinistro.documento_url)
@@ -41,7 +42,8 @@ def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
             imagem = Image.open(sinistro.documento_url)
         raciocinio.append("Sucesso: Documento carregado.")
 
-        # --- Passo 2: OCR ---
+      
+        
         raciocinio.append("Passo 2: A executar OCR para extrair texto.")
         texto_extraido = pytesseract.image_to_string(imagem, lang='por')
         
@@ -51,7 +53,8 @@ def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
         
         raciocinio.append(f"Sucesso: Texto extraído. (Tamanho: {len(texto_extraido)} caracteres)")
 
-        # --- Passo 3: PLN (Keywords + NER) ---
+       
+        
         raciocinio.append("Passo 3: A executar PLN para análise de conteúdo.")
         doc = nlp(texto_extraido)
 
@@ -65,17 +68,17 @@ def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
         
         raciocinio.append(f"Análise de Keywords: [Sangue: {tem_sangue}, Acidente: {tem_acidente}, Internamento: {tem_internamento}]")
         
-        # Extração de Entidades (NER)
+        
         pessoas = list(set([ent.text.strip() for ent in doc.ents if ent.label_ == "PER"]))
         orgs = list(set([ent.text.strip() for ent in doc.ents if ent.label_ == "ORG"]))
         datas_str = list(set([ent.text.strip() for ent in doc.ents if ent.label_ == "DATE"]))
         
         raciocinio.append(f"Entidades Encontradas: [Pessoas: {pessoas}, Organizações: {orgs}, Datas: {datas_str}]")
 
-        # --- Passo 4: Motor de Decisão Avançado ---
+       
         raciocinio.append("Passo 4: A aplicar o motor de regras avançado.")
         
-        # Validação de Data (Regra de Produção)
+       
         if datas_str:
             data_valida = False
             for data_texto in datas_str:
@@ -89,12 +92,12 @@ def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
                 except (ValueError, TypeError):
                     continue
         
-        # Lógica de Ambiguidade
+      
         if tem_sangue and tem_acidente:
             raciocinio.append("Decisão: Ambiguidade detetada. A escalar.")
             return SinistroResponse(sinistro_id=sinistro.cliente_id, status="Escalado para Análise Humana", detalhes="Documento ambíguo (menciona sangue e acidente).", raciocinio=raciocinio)
             
-        # Regras de Negócio
+       
         if tem_sangue and "transfusao" in sinistro.tipo_sinistro:
             raciocinio.append("Decisão: Regras para 'Amigo Sangue' cumpridas. A aprovar.")
             return SinistroResponse(sinistro_id=sinistro.cliente_id, status="Aprovado", detalhes="Pagamento processado para emergência de transfusão.", raciocinio=raciocinio)

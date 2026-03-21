@@ -1,6 +1,5 @@
-# app/schemas/sinistro.py
 from pydantic import BaseModel
-from typing import List, Optional # <-- Importe List e Optional
+from typing import List, Optional 
 
 class SinistroRequest(BaseModel):
     cliente_id: int
