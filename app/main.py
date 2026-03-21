@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Depends
 from app.auth.utils import verify_token
 from app.schemas.sinistro import SinistroRequest, SinistroResponse
-from app.services.agente_ia import processar_sinistro_logica
+from app.services.agente_ia import processar_sinistro_logica_IA
 
 app = FastAPI(
     title="SeguraFácil AgentIA",
@@ -25,5 +25,5 @@ def endpoint_processar_sinistro(
     """
     Processa um novo pedido de sinistro usando o Agente de IA.
     """
-    decisao = processar_sinistro_logica(sinistro_request)
+    decisao = processar_sinistro_logica_IA(sinistro_request)
     return decisao
