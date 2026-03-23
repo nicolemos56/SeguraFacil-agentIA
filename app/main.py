@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, UploadFile, File, Form
 from app.auth.utils import verify_token
 from app.schemas.sinistro import SinistroRequest, SinistroResponse
-from app.services.agente_ia import processar_sinistro_logica_IA
+from app.services.agente_ia import processar_sinistro_logica
 
 app = FastAPI(
     title="SeguraFácil AgentIA",
@@ -18,11 +18,21 @@ def private_endpoint(payload: dict = Depends(verify_token)):
 
 @app.post("/api/agente/processar-sinistro", response_model=SinistroResponse, tags=["Agente IA"])
 def endpoint_processar_sinistro(
-    sinistro_request: SinistroRequest, 
+   
+    cliente_id: int = Form(...),
+    tipo_sinistro: str = Form(...),
+    uploaded_document: UploadFile = File(...),
     payload: dict = Depends(verify_token)
 ):
     """
-    Processa um novo pedido de sinistro usando o Agente de IA.
+    Processa um novo pedido de sinistro recebendo o documento diretamente.
     """
-    decisao = processar_sinistro_logica_IA(sinistro_request)
+   
+    sinistro_request = SinistroRequest(
+        cliente_id=cliente_id,
+        tipo_sinistro=tipo_sinistro,
+        documento_url=uploaded_document.file 
+    )
+    
+    decisao = processar_sinistro_logica(sinistro_request)
     return decisao
