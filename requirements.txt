@@ -1,12 +1,20 @@
+# Backend - FastAPI
 fastapi
 uvicorn
 python-jose[cryptography]
-python-dotenv
-pytesseract
-pillow
-spacy
-requests
-streamlit
-python-dateutil
-pydantic-settings
 python-multipart
+pydantic-settings
+python-dotenv
+requests
+
+# Frontend - Streamlit
+streamlit
+
+# IA - OCR e PLN
+pytesseract
+Pillow
+spacy
+
+# Modelo de linguagem para o spaCy
+# O Render vai fazer o download disto durante o build
+https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.7.0/pt_core_news_sm-3.7.0-py3-none-any.whl
