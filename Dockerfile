@@ -1,32 +1,25 @@
-# 1. Começar com uma imagem base oficial do Python
-FROM python:3.9-slim
+# Dockerfile CORRIGIDO E FINAL
 
-# 2. Definir o diretório de trabalho dentro do contentor
+# 1. Imagem Base: Começamos com uma imagem oficial do Python 3.11
+FROM python:3.11-slim
+
+# 2. Variáveis de Ambiente: Boas práticas para o Python
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# 3. Instalar Dependências do Sistema (A NOSSA ALTERAÇÃO AQUI!)
+# Antes de instalar qualquer coisa do Python, instalamos o Tesseract.
+RUN apt-get update && apt-get install -y tesseract-ocr && rm -rf /var/lib/apt/lists/*
+
+# 4. Definir o Diretório de Trabalho
 WORKDIR /code
 
-# 3. Instalar as dependências do sistema
-RUN apt-get update && apt-get install -y \
-    # A "Caixa de Ferramentas" para compilar código
-    build-essential \
-    # Dependências para a biblioteca 'lxml' (muito comum)
-    libxml2-dev libxslt-dev \
-    # A nossa dependência principal para OCR
-    tesseract-ocr tesseract-ocr-por \
-    # Limpar o cache para manter a imagem pequena
-    && rm -rf /var/lib/apt/lists/*
-
-# 4. Copiar o arquivo de requisitos e instalar as bibliotecas Python
+# 5. Copiar e Instalar as Dependências Python
 COPY ./requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# 5. Garante que o modelo do spaCy seja baixado durante o build
-RUN python -m spacy download pt_core_news_sm
-
-# 6. Copiar todo o código da nossa aplicação para dentro do contentor
+# 6. Copiar o Código da Aplicação
 COPY ./app /code/app
 
-# 7. Expor a porta que o Uvicorn vai usar
-EXPOSE 8000
-
-# 8. O comando para iniciar a nossa API quando o contentor arrancar
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 7. Comando para Executar a Aplicação
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
