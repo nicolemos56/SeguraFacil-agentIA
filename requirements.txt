@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-jose[cryptography]
+python-dotenv
+pytesseract
+pillow
+spacy
+requests
+streamlit
+python-dateutil
+streamlit-auth0-login 
+stripe 
+paypalrestsdk
