@@ -2,15 +2,24 @@ import streamlit as st
 import requests
 from urllib.parse import urlencode
 import os
+import sys
 import platform
 from dotenv import load_dotenv
 
-# --- CARREGAR LÓGICA DIRETAMENTE (Estratégia para Deploy na Nuvem) ---
+
+# Adiciona o diretório atual ao sys.path para garantir que a pasta 'app' seja encontrada
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+# --- CARREGAR LÓGICA DIRETAMENTE ---
 try:
     from app.services.agente_ia import processar_sinistro_logica_IA, acionar_pagamento_com_paypal
     from app.schemas.sinistro import SinistroRequest
-except ImportError:
-    st.error("🚨 Erro: Pasta 'app' não encontrada. Verifique a estrutura do projeto.")
+except ImportError as e:
+    st.error(f"❌ Erro Crítico: Não foi possível carregar a lógica do Agente. Detalhe: {e}")
+    st.info("💡 Dica: Verifique se a pasta 'app' foi enviada para o GitHub e se contém os arquivos __init__.py")
+    st.stop() # INTERROMPE AQUI PARA EVITAR NAMEERROR DEPOIS
 
 load_dotenv()
 
@@ -79,17 +88,29 @@ elif st.session_state.role == 'taxista':
                         # Tenta Backend Local
                         res = requests.post(f"{API_URL}/api/agente/submeter-sinistro", json=payload, timeout=3).json()
                         st.session_state.meu_sinistro_id = res['id']
-                    except:
+                        st.rerun()
+                    except Exception as backend_err:
                         # Fallback: Execução Direta (Deploy na Nuvem)
                         req_obj = SinistroRequest(cliente_id=123, tipo_sinistro="sangue", documento_url=temp_path)
                         res_ia = processar_sinistro_logica_IA(req_obj)
-                        new_id = len(st.session_state.fila_cloud) + 1
-                        st.session_state.fila_cloud[new_id] = {
-                            "id": new_id, "cliente": 123, "status": "Aguardando Oficial", 
-                            "detalhes": res_ia.detalhes, "raciocinio": res_ia.raciocinio, "payout_id": None
-                        }
-                        st.session_state.meu_sinistro_id = new_id
-                    st.rerun()
+
+                        # --- NOVA REGRA DE NEGÓCIO NO FRONTEND ---
+                        if getattr(res_ia, 'status', None) == "Rejeitado":
+                            st.error(f"❌ Documento Recusado: {res_ia.detalhes}")
+                            with st.expander("Ver Auditoria de Recusa"):
+                                for p in getattr(res_ia, 'raciocinio', []):
+                                    st.write(f"🚫 {p}")
+                            # mantém usuário no estado para poder reenviar em seguida
+                            st.session_state.meu_sinistro_id = None
+                        else:
+                            new_id = len(st.session_state.fila_cloud) + 1
+                            st.session_state.fila_cloud[new_id] = {
+                                "id": new_id, "cliente": 123, "status": res_ia.status if hasattr(res_ia, 'status') else "Aguardando Oficial", 
+                                "detalhes": res_ia.detalhes, "raciocinio": res_ia.raciocinio, "payout_id": None
+                            }
+                            st.session_state.meu_sinistro_id = new_id
+                            st.success(f"✅ Documento enviado com status: {res_ia.status}")
+                        st.rerun()
     else:
         # CONSULTA STATUS (API ou Memória Local)
         status_res = None
@@ -115,8 +136,16 @@ elif st.session_state.role == 'taxista':
                 del st.session_state.meu_sinistro_id
                 st.rerun()
         else:
-            st.info(f"⏳ Status Atual: **{current_status}**")
-            st.write("O Agente de IA validou o pedido. Aguardando libertação de fundos pelo Oficial da Seguradora.")
+            st.info(f"⏳ Status Atual: **{current_status}**")#agoara vamos fazer uma verificação no status para exibir msgsagem especificais de acordo ao status. por exemplo se estafo for rejeitado exibir o motivo da rejeição e os passos para correção, se for aprovado exibir uma mensagem de aguardo de liberação do oficial e assim por diante. 
+            if current_status == "Rejeitado":
+                st.error(f"❌ Seu sinistro foi rejeitado. Motivo: {status_res.get('detalhes', 'Sem detalhes disponíveis.')}")
+                with st.expander("👁️ Ver Auditoria de Rejeição"):
+                    for passo in status_res.get('raciocinio', []):
+                        st.write(f"🚫 {passo}")
+                if st.button("Reenviar Sinistro com Correções"):
+                    del st.session_state.meu_sinistro_id
+                    st.rerun()
+           # st.write("O Agente de IA validou o pedido. Aguardando libertação de fundos pelo Oficial da Seguradora.")
             if st.button("🔄 Atualizar Status"): 
                 st.rerun()
 
@@ -129,7 +158,8 @@ elif st.session_state.role == 'oficial':
     
     # LISTAR PENDENTES (API ou Memória Local)
     try:
-        pendentes = requests.get(f"{API_URL}/api/oficial/pendentes", timeout=2).json()
+        pendentes_api = requests.get(f"{API_URL}/api/oficial/pendentes", timeout=2).json()
+        pendentes = [item for item in pendentes_api if item.get('status') != "Rejeitado"]
     except:
         pendentes = [v for k, v in st.session_state.fila_cloud.items() if v['status'] == "Aguardando Oficial"]
 
@@ -173,7 +203,10 @@ elif st.session_state.role == 'oficial':
             "redirect_uri": REDIRECT_URI, 
             "state": "role=oficial"
         }
-        st.link_button("🔑 Abrir Cofre PayPal (Auth0 Vault)", f"https://{AUTH0_DOMAIN}/authorize?{urlencode(params)}")
+        if not pendentes:
+            st.button("🔑 Abrir Cofre PayPal (Auth0 Vault)", disabled=True)
+        else:
+            st.link_button("🔑 Abrir Cofre PayPal (Auth0 Vault)", f"https://{AUTH0_DOMAIN}/authorize?{urlencode(params)}")
     else:
         st.success("🔒 Auth0 Token Vault: Ativo e Seguro.")
         if 'sucesso_oficial' in st.session_state:

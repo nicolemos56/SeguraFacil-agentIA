@@ -52,7 +52,46 @@ def acionar_pagamento_com_paypal(valor_usd: int) -> tuple[bool, str]:
     except Exception as e:
         return False, f"Falha no processamento financeiro: {str(e)}"
 
-def processar_sinistro_logica_IA(sinistro: SinistroRequest, documento_enviado=None) -> SinistroResponse:
+def processar_sinistro_logica_IA(sinistro: SinistroRequest) -> SinistroResponse:
+    raciocinio = []
+    try:
+        # PASSO 1: CARREGAR
+        raciocinio.append("Passo 1: A validar documento...")
+        imagem = Image.open(sinistro.documento_url)
+
+        # PASSO 2: OCR RIGOROSO
+        raciocinio.append("Passo 2: A executar OCR...")
+        texto = pytesseract.image_to_string(imagem, lang='por').strip()
+        
+        # --- VALIDAÇÃO 1: É UM DOCUMENTO COM TEXTO? ---
+        if len(texto) < 30: # Menos de 30 letras? Provavelmente não é um documento.
+            raciocinio.append("⚠️ REJEITADO: O documento parece não conter texto legível ou está fora de contexto.")
+            return SinistroResponse(sinistro_id=0, status="Rejeitado", detalhes="Documento inválido ou ilegível.", raciocinio=raciocinio)
+
+        raciocinio.append(f"Sucesso: Texto extraído ({len(texto)} caracteres).")
+
+        # PASSO 3: PLN (Busca de Contexto)
+        doc = nlp(texto.lower())
+        keywords_medicas = ["sangue", "transfusão", "hospital", "médico", "clínica", "atestado", "requisição", "urgência"]
+        tem_contexto_medico = any(token.lemma_ in keywords_medicas for token in doc)
+        
+        # --- VALIDAÇÃO 2: É MESMO UM DOCUMENTO MÉDICO? ---
+        if not tem_contexto_medico:
+            raciocinio.append("⚠️ REJEITADO: Imagem identificada como fora de contexto (Não médico).")
+            return SinistroResponse(sinistro_id=0, status="Rejeitado", detalhes="O Agente não identificou contexto de saúde nesta imagem.", raciocinio=raciocinio)
+
+        # PASSO 4: DECISÃO DE APROVAÇÃO OU ESCALAÇÃO
+        tem_sangue = any(token.lemma_ in ["sangue", "transfusão", "hemoterapia"] for token in doc)
+        
+        if tem_sangue and "sangue" in sinistro.tipo_sinistro.lower():
+            raciocinio.append("✅ SUCESSO: Critérios de Aprovação Automática preenchidos.")
+            return SinistroResponse(sinistro_id=123, status="Aprovado", detalhes="Aguardando assinatura do Oficial.", raciocinio=raciocinio)
+        else:
+            raciocinio.append("⚖️ ESCALADO: Documento médico válido, mas requer revisão manual.")
+            return SinistroResponse(sinistro_id=0, status="Escalado", detalhes="Necessário validar conformidade manual.", raciocinio=raciocinio)
+
+    except Exception as e:
+        return SinistroResponse(sinistro_id=0, status="Erro", detalhes=f"Erro: {str(e)}", raciocinio=raciocinio)
     print(f"🤖 Agente de IA iniciando análise para Cliente: {sinistro.cliente_id}")
     raciocinio = []
     
