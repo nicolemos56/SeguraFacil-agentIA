@@ -161,7 +161,8 @@ elif st.session_state.role == 'oficial':
         pendentes_api = requests.get(f"{API_URL}/api/oficial/pendentes", timeout=2).json()
         pendentes = [item for item in pendentes_api if item.get('status') != "Rejeitado"]
     except:
-        pendentes = [v for k, v in st.session_state.fila_cloud.items() if v['status'] == "Aguardando Oficial"]
+        # Permite receber os casos aprovados/escalados pelo agente, apenas remove REJEITADO
+        pendentes = [v for v in st.session_state.fila_cloud.values() if v.get('status') != "Rejeitado"]
 
     if not pendentes:
         st.info("Não existem sinistros pendentes de autorização.")
