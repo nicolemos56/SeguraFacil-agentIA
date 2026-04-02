@@ -24,21 +24,21 @@ if "code" in query_params and "role" not in query_params:
 
 # 
 if 'role' not in st.session_state or st.session_state.role is None:
-    st.title("🛡️ Bem-vindo ao SeguraFácil")
+    st.title("🛡️ Welcome to SeguraFácil")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🚖 PORTAL DO TAXISTA"):
+        if st.button("🚖 INFORMAL WORKER PORTAL"):
             st.session_state.role = 'taxista'
             st.rerun()
     with col2:
-        if st.button("🏢 PORTAL DO OFICIAL"):
+        if st.button("🏢 INSURENCE OFFICER PORTAL"):
             st.session_state.role = 'oficial'
             st.rerun()
 
 # 
 elif st.session_state.role == 'taxista':
     st.sidebar.button("⬅️ Sair", on_click=lambda: st.session_state.update({"role": None}))
-    st.title("🚖 Painel do Taxista")
+    st.title("🚖 Informal Worker Panel")
     
     if 'meu_sinistro_id' not in st.session_state:
         doc = st.file_uploader("Submeter Comprovativo", type=['png', 'jpg'])
