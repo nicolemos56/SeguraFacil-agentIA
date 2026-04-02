@@ -8,6 +8,5 @@ spacy
 requests
 streamlit
 python-dateutil
-streamlit-auth0-login 
 stripe 
 paypalrestsdk
